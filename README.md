@@ -14,7 +14,6 @@ Includes model training CLI, metrics, decision fusion, and a Streamlit dashboard
 - `main.py`: Training and module pipelines
 - `models/`: Trained model files + metrics JSON
 - `data/`: Input datasets
-- `generate_final_report_pdf.py`: Final report generator
 
 ## Local Run
 
