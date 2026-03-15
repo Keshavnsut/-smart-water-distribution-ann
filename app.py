@@ -166,7 +166,19 @@ def render_classification_diagnostics(metrics: dict[str, dict]) -> None:
     threshold = st.slider("Decision threshold", 0.05, 0.95, min(max(default_threshold, 0.05), 0.95), 0.01)
 
     X_eval, y_eval = _prepare_binary_eval_inputs(data[module], target_col)
-    y_prob = models[module].predict_proba(X_eval)[:, 1]
+    try:
+        y_prob = models[module].predict_proba(X_eval)[:, 1]
+    except Exception as exc:
+        st.error(
+            "Model inference failed due to runtime compatibility mismatch. "
+            "This usually happens when model files were trained with a different scikit-learn version."
+        )
+        st.code(f"{type(exc).__name__}: {exc}")
+        st.info(
+            "Fix: retrain and re-upload model files using the same versions as deployment runtime, "
+            "or pin compatible runtime/library versions."
+        )
+        return
     y_pred = (y_prob >= threshold).astype(int)
 
     acc = float(accuracy_score(y_eval, y_pred))
@@ -415,15 +427,23 @@ def render_live_decision() -> None:
         }
         quality_input = pd.DataFrame([quality_row])
 
-        demand_pred = float(models["Demand"].predict(demand_input)[0])
-        demand_series = pd.to_numeric(data["Demand"][demand_target], errors="coerce")
-        dmin = float(demand_series.min())
-        dmax = float(demand_series.max())
-        demand_score = 0.0 if np.isclose(dmax, dmin) else float(np.clip((demand_pred - dmin) / (dmax - dmin), 0.0, 1.0))
+        try:
+            demand_pred = float(models["Demand"].predict(demand_input)[0])
+            demand_series = pd.to_numeric(data["Demand"][demand_target], errors="coerce")
+            dmin = float(demand_series.min())
+            dmax = float(demand_series.max())
+            demand_score = 0.0 if np.isclose(dmax, dmin) else float(np.clip((demand_pred - dmin) / (dmax - dmin), 0.0, 1.0))
 
-        distribution_risk = float(models["Distribution"].predict_proba(distribution_input)[0][1])
-        leak_probability = float(models["Leak"].predict_proba(leak_input)[0][1])
-        quality_probability = float(models["Quality"].predict_proba(quality_input)[0][1])
+            distribution_risk = float(models["Distribution"].predict_proba(distribution_input)[0][1])
+            leak_probability = float(models["Leak"].predict_proba(leak_input)[0][1])
+            quality_probability = float(models["Quality"].predict_proba(quality_input)[0][1])
+        except Exception as exc:
+            st.error(
+                "Prediction failed due to model/runtime compatibility mismatch. "
+                "Please retrain models using deployment runtime versions and upload updated model files."
+            )
+            st.code(f"{type(exc).__name__}: {exc}")
+            return
 
         decision = integrated_decision(
             demand_score=demand_score,
