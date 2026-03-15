@@ -1,0 +1,23 @@
+{
+  "module": "demand",
+  "samples": 140086,
+  "usable_samples": 8038,
+  "train_samples": 6430,
+  "test_samples": 1608,
+  "target_col": "074-01 : \nLongridge : \nNetflow Stored \n(l/s)",
+  "timestamp_col": " Date ",
+  "rmse": 1.948021459505567,
+  "mae": 1.223866641904723,
+  "r2": 0.914986935777871,
+  "params": {
+    "hidden_layer_sizes": [
+      128,
+      64
+    ],
+    "learning_rate_init": 0.001,
+    "alpha": 0.0001,
+    "max_iter": 400,
+    "solver": "adam",
+    "test_size": 0.2
+  }
+}

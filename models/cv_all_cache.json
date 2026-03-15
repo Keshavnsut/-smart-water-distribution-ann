@@ -1,0 +1,26 @@
+{
+  "quality": {
+    "accuracy_mean": 0.6374045801526718,
+    "accuracy_std": 0.017449052596431227,
+    "f1_mean": 0.5208277841316857,
+    "f1_std": 0.0349913326254268,
+    "roc_auc_mean": 0.6622449431546455,
+    "roc_auc_std": 0.02236253601970362
+  },
+  "distribution": {
+    "accuracy_mean": 0.9354,
+    "accuracy_std": 0.0066,
+    "f1_mean": 0.6763,
+    "f1_std": 0.0486,
+    "roc_auc_mean": 0.8709,
+    "roc_auc_std": 0.0209
+  },
+  "leak": {
+    "accuracy_mean": 0.977,
+    "accuracy_std": 0.0047,
+    "f1_mean": 0.8089,
+    "f1_std": 0.0437,
+    "roc_auc_mean": 0.9929,
+    "roc_auc_std": 0.0017
+  }
+}
