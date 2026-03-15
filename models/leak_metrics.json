@@ -18,6 +18,10 @@
     "alpha": 0.001,
     "max_iter": 600,
     "solver": "adam",
+    "balance_classes": false,
+    "optimize_threshold": false,
+    "threshold_metric": "f1",
+    "decision_threshold": 0.5,
     "test_size": 0.2
   },
   "roc_auc": 0.9912464006581653
