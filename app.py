@@ -424,6 +424,21 @@ def render_live_decision() -> None:
         trihalomethanes = st.number_input("Trihalomethanes", value=float(quality_defaults["trihalomethanes"]))
         turbidity = st.number_input("Turbidity", value=float(quality_defaults["turbidity"]))
 
+    st.markdown("---")
+    st.markdown("### Manual Module Overrides (Optional)")
+    with st.expander("Override Predicted Module Values", expanded=False):
+        override_demand = st.checkbox("Override Demand Score")
+        manual_demand = st.slider("Manual Demand Score", 0.0, 1.0, 0.5, 0.01)
+
+        override_dist = st.checkbox("Override Distribution Risk")
+        manual_dist = st.slider("Manual Distribution Risk", 0.0, 1.0, 0.5, 0.01)
+
+        override_leak = st.checkbox("Override Leak Probability")
+        manual_leak = st.slider("Manual Leak Probability", 0.0, 1.0, 0.5, 0.01)
+
+        override_quality = st.checkbox("Override Quality Probability")
+        manual_quality = st.slider("Manual Quality Probability", 0.0, 1.0, 0.5, 0.01)
+
     if st.button("Predict and Recommend", type="primary"):
         # Demand input row
         demand_row = demand_base.copy()
@@ -484,6 +499,15 @@ def render_live_decision() -> None:
             )
             st.code(f"{type(exc).__name__}: {exc}")
             return
+
+        if override_demand:
+            demand_score = manual_demand
+        if override_dist:
+            distribution_risk = manual_dist
+        if override_leak:
+            leak_probability = manual_leak
+        if override_quality:
+            quality_probability = manual_quality
 
         decision = integrated_decision(
             demand_score=demand_score,
