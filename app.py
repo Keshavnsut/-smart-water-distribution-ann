@@ -50,12 +50,18 @@ def load_metrics() -> dict[str, dict]:
 
 
 @st.cache_resource
-def load_models() -> dict[str, object]:
+def load_models() -> tuple[dict[str, object], dict[str, str]]:
     models = {}
+    errors: dict[str, str] = {}
     for name, path in MODEL_FILES.items():
         if path.exists():
-            models[name] = joblib.load(path)
-    return models
+            try:
+                models[name] = joblib.load(path)
+            except Exception as exc:
+                errors[name] = f"{type(exc).__name__}: {exc}"
+        else:
+            errors[name] = "Model file is missing"
+    return models, errors
 
 
 @st.cache_data
@@ -137,10 +143,14 @@ def _prepare_binary_eval_inputs(df: pd.DataFrame, target_col: str) -> tuple[pd.D
 def render_classification_diagnostics(metrics: dict[str, dict]) -> None:
     st.subheader("Classification Diagnostics")
 
-    models = load_models()
+    models, model_errors = load_models()
     data = load_reference_data()
     modules = ["Distribution", "Leak", "Quality"]
     available = [m for m in modules if m in models and m in data and m in metrics]
+
+    if model_errors:
+        with st.expander("Model Load Status", expanded=False):
+            st.json(model_errors)
 
     if not available:
         st.info("Diagnostics unavailable. Ensure models, metrics, and datasets are present.")
@@ -245,9 +255,14 @@ def render_metrics(metrics: dict[str, dict]) -> None:
 def render_live_decision() -> None:
     st.subheader("Live Decision From Module Parameters")
 
-    models = load_models()
+    models, model_errors = load_models()
     data = load_reference_data()
     required = {"Demand", "Distribution", "Leak", "Quality"}
+
+    if model_errors:
+        st.warning("Some models could not be loaded in this environment.")
+        with st.expander("Model Load Errors", expanded=False):
+            st.json(model_errors)
 
     if not required.issubset(set(models.keys())):
         st.warning("Some model files are missing. Train all modules before using live prediction.")
