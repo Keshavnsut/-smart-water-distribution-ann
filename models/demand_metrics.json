@@ -6,7 +6,7 @@
   "test_samples": 1608,
   "target_col": "074-01 : \nLongridge : \nNetflow Stored \n(l/s)",
   "timestamp_col": " Date ",
-  "rmse": 1.948021459505567,
+  "rmse": 1.9480214595055672,
   "mae": 1.223866641904723,
   "r2": 0.914986935777871,
   "params": {
