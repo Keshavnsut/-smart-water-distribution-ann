@@ -1,64 +1,113 @@
 # Smart Water Distribution Management System (ANN)
 
-A 4-module AI system for smart water operations:
-- Demand forecasting (MLPRegressor)
-- Distribution risk detection (MLPClassifier)
-- Leak detection (MLPClassifier)
-- Water quality/potability classification (MLPClassifier)
+End-to-end machine learning project for intelligent water-network monitoring and decision support.
 
-Includes model training CLI, metrics, decision fusion, and a Streamlit dashboard.
+The system trains and serves four ANN-based modules:
+- Demand forecasting (regression)
+- Distribution risk detection (classification)
+- Leak detection (classification)
+- Water potability classification (classification)
 
-## Project Structure
+It includes:
+- A unified training CLI
+- Saved models and metrics
+- A rule-based integrated recommendation engine
+- A Streamlit dashboard for visualization and live inference
 
-- `app.py`: Streamlit dashboard (deployment entrypoint)
-- `main.py`: Training and module pipelines
-- `models/`: Trained model files + metrics JSON
-- `data/`: Input datasets
+## Features
 
-## Local Run
+- Multi-module ANN training pipeline using scikit-learn MLP models
+- Shared preprocessing with imputation, scaling, and categorical handling
+- Classification diagnostics: confusion matrix, ROC, PR curves
+- Integrated action recommendation from module outputs
+- Streamlit-ready deployment configuration
 
-1. Install dependencies:
+## Repository Structure
+
+- `app.py` - Streamlit dashboard entrypoint
+- `main.py` - Training, evaluation, and integrated decision CLI
+- `data/` - Input datasets used by training and dashboard diagnostics
+- `models/` - Trained model files and metrics JSON outputs
+- `requirements.txt` - Python dependencies
+- `runtime.txt` - Streamlit Cloud Python runtime pin
+- `.python-version` - Local/runtime version hint
+
+## Prerequisites
+
+- Python 3.11+ recommended
+- pip
+
+## Install
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Start app:
+## Run Dashboard Locally
 
 ```bash
 streamlit run app.py --server.port 8501 --server.address 127.0.0.1
 ```
 
-3. Open:
+Then open:
 
-`http://127.0.0.1:8501`
+http://127.0.0.1:8501
 
-## GitHub Setup
+## Training Commands
 
-Run these commands from project root:
+Train each module individually:
 
 ```bash
-git init
-git add .
-git commit -m "Initial commit: Smart Water Distribution ANN"
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
+python main.py train-demand --csv ./data/demand/netbase_inlet-outlet-cont_logged_user_April2018.csv
+python main.py train-distribution --csv ./data/distribution/training_dataset_2.csv --target-col ATT_FLAG
+python main.py train-leak --csv ./data/leak/location_aware_gis_leakage_dataset.csv --target-col Leakage_Flag
+python main.py train-quality --csv ./data/quality/water_potability.csv --target-col Potability
 ```
 
-## Deploy on Streamlit Community Cloud
+Train all modules in one run:
+
+```bash
+python main.py train-all \
+	--demand-csv ./data/demand/netbase_inlet-outlet-cont_logged_user_April2018.csv \
+	--distribution-csv ./data/distribution/training_dataset_2.csv \
+	--leak-csv ./data/leak/location_aware_gis_leakage_dataset.csv \
+	--quality-csv ./data/quality/water_potability.csv \
+	--distribution-target-col ATT_FLAG \
+	--leak-target-col Leakage_Flag \
+	--quality-target-col Potability
+```
+
+Run integrated decision from command line:
+
+```bash
+python main.py recommend \
+	--demand-score 0.70 \
+	--distribution-risk 0.35 \
+	--leak-probability 0.20 \
+	--quality-probability 0.85
+```
+
+## Deployment (Streamlit Community Cloud)
 
 1. Push this repo to GitHub.
-2. Open Streamlit Community Cloud and click **New app**.
-3. Select repository and branch `main`.
-4. Set main file path to `app.py`.
-5. Deploy.
+2. Open Streamlit Community Cloud.
+3. Create new app with:
+	 - Repository: your fork/repo
+	 - Branch: main
+	 - Main file path: app.py
+4. Deploy.
 
-This repo already includes:
+This repository already contains deployment essentials:
 - `requirements.txt`
-- `runtime.txt` (`python-3.11`)
+- `runtime.txt` (python-3.11)
 
-## Notes
+## Troubleshooting
 
-- If deployment fails due to very large files, move datasets/models to cloud storage and load on startup.
-- Keep secrets in Streamlit Cloud Secrets, not in source files.
+- If app fails while loading models, check package compatibility in `requirements.txt`.
+- If files are reported missing, verify `data/` and `models/` are committed.
+- If deployment is slow, large model/data files are the main reason.
+
+## Security Notes
+
+- Never commit secrets or API keys.
+- Use Streamlit Secrets for sensitive configuration.
