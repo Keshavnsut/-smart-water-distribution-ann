@@ -17,6 +17,7 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
+from sklearn.model_selection import train_test_split
 
 from main import integrated_decision
 
@@ -140,8 +141,29 @@ def _prepare_binary_eval_inputs(df: pd.DataFrame, target_col: str) -> tuple[pd.D
     return X.loc[valid_idx], y.loc[valid_idx].astype(int)
 
 
+def _get_eval_inputs(
+    df: pd.DataFrame,
+    target_col: str,
+    module_metrics: dict,
+    scope: str,
+) -> tuple[pd.DataFrame, pd.Series]:
+    X_all, y_all = _prepare_binary_eval_inputs(df, target_col)
+    if scope.startswith("Official Held-out"):
+        test_size = float(module_metrics.get("params", {}).get("test_size", 0.2))
+        _, X_eval, _, y_eval = train_test_split(
+            X_all,
+            y_all,
+            test_size=test_size,
+            random_state=42,
+            stratify=y_all,
+        )
+        return X_eval, y_eval
+    return X_all, y_all
+
+
 def render_classification_diagnostics(metrics: dict[str, dict]) -> None:
     st.subheader("Classification Diagnostics")
+    st.caption("Technical panel for model-behavior analysis. Use held-out mode for official reporting.")
 
     models, model_errors = load_models()
     data = load_reference_data()
@@ -157,15 +179,25 @@ def render_classification_diagnostics(metrics: dict[str, dict]) -> None:
         return
 
     module = st.selectbox("Select module", available, index=0)
-    target_col = metrics[module].get("target_col")
+    module_metrics = metrics[module]
+    target_col = module_metrics.get("target_col")
     if not target_col or target_col not in data[module].columns:
         st.warning(f"Target column not found for {module} diagnostics.")
         return
 
-    default_threshold = float(metrics[module].get("params", {}).get("decision_threshold", 0.5))
+    scope = st.radio(
+        "Evaluation scope",
+        [
+            "Official Held-out Test (reproducible)",
+            "Full Dataset (operational monitoring)",
+        ],
+        horizontal=True,
+    )
+
+    default_threshold = float(module_metrics.get("params", {}).get("decision_threshold", 0.5))
     threshold = st.slider("Decision threshold", 0.05, 0.95, min(max(default_threshold, 0.05), 0.95), 0.01)
 
-    X_eval, y_eval = _prepare_binary_eval_inputs(data[module], target_col)
+    X_eval, y_eval = _get_eval_inputs(data[module], target_col, module_metrics, scope)
     try:
         y_prob = models[module].predict_proba(X_eval)[:, 1]
     except Exception as exc:
@@ -197,7 +229,7 @@ def render_classification_diagnostics(metrics: dict[str, dict]) -> None:
     cm = confusion_matrix(y_eval, y_pred, labels=[0, 1])
     cm_df = pd.DataFrame(cm, index=["Actual 0", "Actual 1"], columns=["Pred 0", "Pred 1"])
     st.markdown("### Confusion Matrix")
-    st.dataframe(cm_df, use_container_width=True)
+    st.dataframe(cm_df, width="stretch")
 
     fpr, tpr, _ = roc_curve(y_eval, y_prob)
     roc_df = pd.DataFrame({"FPR": fpr, "TPR": tpr}).set_index("FPR")
@@ -242,13 +274,21 @@ def render_header() -> None:
 
 
 def render_metrics(metrics: dict[str, dict]) -> None:
-    st.subheader("Training Results")
+    st.subheader("Executive Model Summary")
     if not metrics:
         st.warning("No metrics found in the models folder. Train modules first.")
         return
 
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Demand R2", f"{metrics.get('Demand', {}).get('r2', 0.0):.4f}")
+    c2.metric("Distribution ROC-AUC", f"{metrics.get('Distribution', {}).get('roc_auc', 0.0):.4f}")
+    c3.metric("Leak ROC-AUC", f"{metrics.get('Leak', {}).get('roc_auc', 0.0):.4f}")
+    c4.metric("Quality ROC-AUC", f"{metrics.get('Quality', {}).get('roc_auc', 0.0):.4f}")
+
+    st.markdown("### Official Test Metrics (from saved training run)")
+
     table = build_overview_table(metrics)
-    st.dataframe(table, use_container_width=True)
+    st.dataframe(table, width="stretch")
 
     cls_plot = table[["Module", "Accuracy", "F1", "ROC AUC"]].copy()
     cls_plot = cls_plot.fillna(0.0).set_index("Module")
@@ -473,11 +513,22 @@ def render_live_decision() -> None:
 def main() -> None:
     render_header()
     metrics = load_metrics()
-    render_metrics(metrics)
-    st.divider()
-    render_classification_diagnostics(metrics)
-    st.divider()
-    render_live_decision()
+    view = st.sidebar.radio(
+        "Dashboard View",
+        [
+            "Overview",
+            "Recommendation",
+            "Advanced Diagnostics",
+        ],
+    )
+
+    if view == "Overview":
+        render_metrics(metrics)
+        st.info("Overview shows official test metrics from training artifacts.")
+    elif view == "Recommendation":
+        render_live_decision()
+    else:
+        render_classification_diagnostics(metrics)
 
 
 if __name__ == "__main__":
