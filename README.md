@@ -12,6 +12,7 @@ It includes:
 - A unified training CLI
 - Saved models and metrics
 - A rule-based integrated recommendation engine
+- Configurable decision thresholds (CLI and dashboard)
 - A Streamlit dashboard for visualization and live inference
 
 ## Features
@@ -86,6 +87,28 @@ python main.py recommend \
 	--leak-probability 0.20 \
 	--quality-probability 0.85
 ```
+
+Run integrated decision with custom rule thresholds:
+
+```bash
+python main.py recommend \
+	--demand-score 0.70 \
+	--distribution-risk 0.35 \
+	--leak-probability 0.20 \
+	--quality-probability 0.85 \
+	--quality-threshold 0.50 \
+	--leak-threshold 0.70 \
+	--distribution-threshold 0.70 \
+	--demand-threshold 0.75
+```
+
+Threshold meanings:
+- `--quality-threshold`: if safe-water probability is below this value, trigger quality-critical action.
+- `--leak-threshold`: if leak probability is at or above this value, trigger leak-high action.
+- `--distribution-threshold`: if distribution risk is at or above this value, trigger distribution-high action.
+- `--demand-threshold`: if normalized demand score is at or above this value, trigger demand-surge action.
+
+In the dashboard, these are available in Recommendation view under **Tune Rule Thresholds**.
 
 ## Deployment (Streamlit Community Cloud)
 

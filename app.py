@@ -439,6 +439,19 @@ def render_live_decision() -> None:
         override_quality = st.checkbox("Override Quality Probability")
         manual_quality = st.slider("Manual Quality Probability", 0.0, 1.0, 0.5, 0.01)
 
+    st.markdown("### Decision Thresholds")
+    with st.expander("Tune Rule Thresholds", expanded=False):
+        quality_threshold = st.slider(
+            "Quality Critical Threshold (safe-water probability)",
+            0.05,
+            0.95,
+            0.50,
+            0.01,
+        )
+        leak_threshold = st.slider("Leak High-Risk Threshold", 0.05, 0.95, 0.70, 0.01)
+        distribution_threshold = st.slider("Distribution High-Risk Threshold", 0.05, 0.95, 0.70, 0.01)
+        demand_threshold = st.slider("Demand Surge Threshold", 0.05, 0.95, 0.75, 0.01)
+
     if st.button("Predict and Recommend", type="primary"):
         # Demand input row
         demand_row = demand_base.copy()
@@ -514,6 +527,10 @@ def render_live_decision() -> None:
             distribution_risk=distribution_risk,
             leak_probability=leak_probability,
             quality_probability=quality_probability,
+            quality_critical_threshold=quality_threshold,
+            leak_high_threshold=leak_threshold,
+            distribution_high_threshold=distribution_threshold,
+            demand_surge_threshold=demand_threshold,
         )
 
         st.markdown("### Module Predictions")
@@ -532,6 +549,8 @@ def render_live_decision() -> None:
         st.info(f"Priority: {decision['priority']}")
         st.markdown(f"Rule Triggered: {decision['rule_id']}")
         st.write(f"Reason: {decision['rationale']}")
+        with st.expander("Thresholds Applied", expanded=False):
+            st.json(decision["thresholds"])
 
 
 def main() -> None:

@@ -660,29 +660,55 @@ def integrated_decision(
     distribution_risk: float,
     leak_probability: float,
     quality_probability: float,
+    quality_critical_threshold: float = 0.50,
+    leak_high_threshold: float = 0.70,
+    distribution_high_threshold: float = 0.70,
+    demand_surge_threshold: float = 0.75,
 ) -> dict[str, Any]:
     # quality_probability is probability of safe water in [0, 1]
     # distribution_risk and leak_probability are risk probabilities in [0, 1]
-    if quality_probability < 0.50:
+    thresholds = {
+        "quality_critical_threshold": quality_critical_threshold,
+        "leak_high_threshold": leak_high_threshold,
+        "distribution_high_threshold": distribution_high_threshold,
+        "demand_surge_threshold": demand_surge_threshold,
+    }
+    for name, value in thresholds.items():
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"{name} must be in [0, 1]. Received: {value}")
+
+    if quality_probability < quality_critical_threshold:
         rule_id = "R1_QUALITY_CRITICAL"
         action = "HOLD_SUPPLY_AND_TRIGGER_TREATMENT"
         priority = "critical"
-        rationale = "Safe water probability fell below 0.50, so quality risk is prioritized over all other conditions."
-    elif leak_probability >= 0.70:
+        rationale = (
+            f"Safe water probability fell below {quality_critical_threshold:.2f}, "
+            "so quality risk is prioritized over all other conditions."
+        )
+    elif leak_probability >= leak_high_threshold:
         rule_id = "R2_LEAK_HIGH"
         action = "ISOLATE_LEAK_ZONE_AND_DISPATCH_MAINTENANCE"
         priority = "high"
-        rationale = "Leak probability is at or above 0.70, indicating likely physical loss and urgent maintenance need."
-    elif distribution_risk >= 0.70:
+        rationale = (
+            f"Leak probability is at or above {leak_high_threshold:.2f}, "
+            "indicating likely physical loss and urgent maintenance need."
+        )
+    elif distribution_risk >= distribution_high_threshold:
         rule_id = "R3_DISTRIBUTION_RISK_HIGH"
         action = "REDUCE_PRESSURE_AND_REROUTE_FLOW"
         priority = "high"
-        rationale = "Distribution risk is at or above 0.70, so pressure control and rerouting are triggered."
-    elif demand_score >= 0.75:
+        rationale = (
+            f"Distribution risk is at or above {distribution_high_threshold:.2f}, "
+            "so pressure control and rerouting are triggered."
+        )
+    elif demand_score >= demand_surge_threshold:
         rule_id = "R4_DEMAND_SURGE"
         action = "INCREASE_SUPPLY_TO_HIGH_DEMAND_ZONES"
         priority = "medium"
-        rationale = "Demand score is high (>= 0.75), so the system increases supply to expected high-usage zones."
+        rationale = (
+            f"Demand score is high (>= {demand_surge_threshold:.2f}), "
+            "so the system increases supply to expected high-usage zones."
+        )
     else:
         rule_id = "R5_NORMAL"
         action = "NORMAL_OPERATION"
@@ -700,6 +726,7 @@ def integrated_decision(
             "leak_probability": leak_probability,
             "quality_probability": quality_probability,
         },
+        "thresholds": thresholds,
     }
 
 
@@ -758,6 +785,10 @@ def build_parser() -> argparse.ArgumentParser:
     p6.add_argument("--distribution-risk", type=float, required=True, help="Distribution risk in [0, 1]")
     p6.add_argument("--leak-probability", type=float, required=True, help="Leak probability in [0, 1]")
     p6.add_argument("--quality-probability", type=float, required=True, help="Safe water probability in [0, 1]")
+    p6.add_argument("--quality-threshold", type=float, default=0.50, help="Critical threshold for safe water probability")
+    p6.add_argument("--leak-threshold", type=float, default=0.70, help="High-risk threshold for leak probability")
+    p6.add_argument("--distribution-threshold", type=float, default=0.70, help="High-risk threshold for distribution risk")
+    p6.add_argument("--demand-threshold", type=float, default=0.75, help="Surge threshold for normalized demand score")
 
     return parser
 
@@ -911,6 +942,10 @@ def main() -> None:
             distribution_risk=args.distribution_risk,
             leak_probability=args.leak_probability,
             quality_probability=args.quality_probability,
+            quality_critical_threshold=args.quality_threshold,
+            leak_high_threshold=args.leak_threshold,
+            distribution_high_threshold=args.distribution_threshold,
+            demand_surge_threshold=args.demand_threshold,
         )
         print(json.dumps(decision, indent=2))
         return
